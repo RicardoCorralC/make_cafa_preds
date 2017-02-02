@@ -4,6 +4,7 @@ from itertools import groupby
 import requests
 import json
 import logging
+import numpy as np
 
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
@@ -40,18 +41,29 @@ def to_list_from_dict_format(scores_dict=None, score_key='score'):
     (_k, ) = set(scores_dict[0].keys()) - set([score_key])
     return sort_list([(_[_k], _[score_key]) for _ in scores_dict])
 
+def softmax(x):
+    x = np.asarray(map(float,x))
+    return np.exp(x) / np.sum(np.exp(x), axis=0)
+
+
 def to_cafa_scorlist_format(scores_list=None, sample_name="T00203", n=5):
-    return "\n".join(["%s\t%s\t%.7f" % (sample_name, _n, _s)
-                      for _n, _s in scores_list[:n]])
+    sl = np.asarray(scores_list)
+    soft_maxs = softmax(sl[:,1])
+    soft_maxs /= max(soft_maxs)
+    _sl = scores_list[:n]
+    return "\n".join(["%s\t%s\t%.2f" % (sample_name, _n, soft_maxs[_i])
+                      for _i, (_n, _s) in zip(xrange(len(_sl)),_sl) if "%.2f"%soft_maxs[_i] != "0.00"])
         
 def main():
     ontologies = ['C','F']
     n = 1500/len(ontologies)
     for filename, path in (iter_directory_files()):
-        print path
         taxonID = filename[len('target.'):-(len('.fasta'))]
         print 'taxonID', taxonID
-        with open('Corraleads_1_'+taxonID+'.txt','w') as fout:
+        _filename = 'Corraleads_1_'+taxonID+'.txt'
+        if os.path.isfile(_filename): 
+            continue
+        with open(_filename,'w') as fout:
             fout.write("%s" % file_header_str)
             for target_name, seq in fasta_iter(path):
                 _tn = target_name.split()[0]
