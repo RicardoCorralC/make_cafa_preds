@@ -37,6 +37,8 @@ def to_cafa_scorlist_format(scores_list=None, sample_name="T00203", n=5):
                       for _n, _s in scores_list[:n]])
         
 def main():
+    ontologies = ['C','F']
+    n = 2
     for filename, path in (iter_directory_files()):
         print path
         taxonID = filename[len('target.'):-(len('.fasta'))]
@@ -44,7 +46,9 @@ def main():
         for target_name, seq in fasta_iter(path):
             _tn = target_name.split()[0]
             data = {'seq':seq}
-            r = requests.post(endpoint, data=json.dumps(data), headers=headers)
+            for onto in ontologies:
+            r = requests.post(endpoint+'/'+onto+'/?n='+str(n), data=json.dumps(data), headers=headers)
+            print json.dumps(r)
             exit()
 
 
